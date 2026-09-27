@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+main {
+  min-height: 100vh;
+  margin-left: 264px;
+  transition: margin-left 180ms ease;
+}
+
+main.sidebar-collapsed {
+  margin-left: 82px;
+}
+
+main.auth-layout {
+  margin-left: 0;
+}
+
+@media (max-width: 700px) {
+  main,
+  main.sidebar-collapsed {
+    margin-left: 76px;
+  }
+
+  main.auth-layout {
+    margin-left: 0;
+  }
+}

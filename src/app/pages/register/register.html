@@ -1,0 +1,63 @@
+<section class="auth-page">
+  <p-card styleClass="auth-card">
+    <div class="auth-brand" aria-label="DentFlow">
+      <img src="dentflow-logo.svg" alt="Logo DentFlow" />
+      <span>DentFlow</span>
+    </div>
+    <p class="eyebrow">Nouveau compte</p>
+    <h1>Inscription</h1>
+    <p class="subtitle">Creez un compte DentFlow. Le mot de passe sera hache par le backend.</p>
+
+    @if (errorMessage()) {
+      <p class="alert alert-error" role="alert">{{ errorMessage() }}</p>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="form-field">
+        <label for="register-username">Nom d'utilisateur</label>
+        <input pInputText id="register-username" type="text" formControlName="username" autocomplete="username" />
+        @if (form.controls.username.touched && form.controls.username.invalid) {
+          <p class="field-error">Utilisez entre 3 et 50 caracteres.</p>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="register-first-name">Prenom</label>
+        <input pInputText id="register-first-name" type="text" formControlName="firstName" autocomplete="given-name" />
+        @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+          <p class="field-error">Le prenom est obligatoire.</p>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="register-last-name">Nom</label>
+        <input pInputText id="register-last-name" type="text" formControlName="lastName" autocomplete="family-name" />
+        @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+          <p class="field-error">Le nom est obligatoire.</p>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="register-email">Adresse e-mail</label>
+        <input pInputText id="register-email" type="email" formControlName="email" autocomplete="email" />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <p class="field-error">Saisissez une adresse e-mail valide.</p>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="register-password">Mot de passe</label>
+        <p-password inputId="register-password" formControlName="password" [feedback]="false" [toggleMask]="true" autocomplete="new-password" />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <p class="field-error">Utilisez entre 8 et 72 caracteres.</p>
+        }
+      </div>
+
+      <button class="primary-button" type="submit" [disabled]="pending()">
+        {{ pending() ? 'Creation...' : 'Creer mon compte' }}
+      </button>
+    </form>
+
+    <p class="auth-switch">Vous avez deja un compte ? <a routerLink="/login">Se connecter</a></p>
+  </p-card>
+</section>

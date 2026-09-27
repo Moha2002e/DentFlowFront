@@ -1,0 +1,32 @@
+
+<aside class="sidebar" [class.collapsed]="collapsed()">
+  <div class="sidebar-top">
+    <a class="brand" routerLink="/home" aria-label="DentFlow - Accueil">
+      <img class="brand-mark" src="dentflow-logo.svg" alt="" />
+      <span class="brand-name">DentFlow</span>
+    </a>
+    <button class="collapse-button" type="button" (click)="toggleSidebar()"
+            [attr.aria-label]="collapsed() ? 'Agrandir la navigation' : 'Réduire la navigation'"
+            [attr.aria-expanded]="!collapsed()">
+      {{ collapsed() ? '›' : '‹' }}
+    </button>
+  </div>
+
+  <nav aria-label="Navigation principale">
+    @if (usersService.user()) {
+      <a routerLink="/home" routerLinkActive="active" title="Accueil">
+        <span class="nav-icon">⌂</span><span class="nav-label">Accueil</span>
+      </a>
+
+      @if (usersService.user()?.role === 'ADMIN') {
+        <a routerLink="/alluser" routerLinkActive="active" title="Gestion des utilisateurs">
+          <span class="nav-icon">♙</span><span class="nav-label">Utilisateurs</span>
+        </a>
+      }
+
+      <button type="button" (click)="usersService.logout()" title="Déconnexion">
+        <span class="nav-icon">↪</span><span class="nav-label">Déconnexion</span>
+      </button>
+    }
+  </nav>
+</aside>

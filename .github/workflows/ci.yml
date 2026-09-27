@@ -1,0 +1,39 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Angular
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      - name: Compiler l'application
+        run: npm run build
+
+      - name: Archiver le build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dentflow-frontend-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,7 @@
+@if (!isAuthPage()) {
+  <app-navbar (collapsedChange)="sidebarCollapsed.set($event)" />
+}
+
+<main [class.sidebar-collapsed]="sidebarCollapsed()" [class.auth-layout]="isAuthPage()">
+  <router-outlet />
+</main>

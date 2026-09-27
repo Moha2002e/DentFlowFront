@@ -1,0 +1,26 @@
+<section class="home-page">
+  <div class="dashboard-shell">
+    <div class="dashboard-heading">
+      <div>
+        <p class="eyebrow">{{ roleLabel() }}</p>
+        <h1>{{ greeting() }}</h1>
+        <p class="dashboard-subtitle">Bienvenue dans votre espace DentFlow.</p>
+      </div>
+      <p-avatar [label]="initials()" size="xlarge" shape="circle" styleClass="profile-avatar" aria-hidden="true" />
+    </div>
+
+    <p-card styleClass="welcome-card">
+      <div class="welcome-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="img">
+          <path d="M12 3v18M3 12h18" />
+        </svg>
+      </div>
+      <div>
+        <p class="card-kicker">Votre tableau de bord</p>
+        <h2>Votre journée commence ici</h2>
+        <p>Les prochains outils de gestion et de suivi seront bientôt disponibles dans cet espace.</p>
+      </div>
+      <p-tag value="Bientôt disponible" severity="info" [rounded]="true" styleClass="coming-soon" />
+    </p-card>
+  </div>
+</section>

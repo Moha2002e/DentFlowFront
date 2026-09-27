@@ -1,0 +1,142 @@
+<div class="card table-item">
+  <div class="user-table-toolbar">
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Utilisateurs</h1>
+    </div>
+    <button class="add-user-button" type="button" (click)="openCreateDrawer()" aria-label="Ajouter un utilisateur" title="Ajouter un utilisateur">+</button>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  <p-table
+    [value]="users()"
+    [paginator]="true"
+    [rows]="10"
+    [rowsPerPageOptions]="[5, 10, 20]"
+    responsiveLayout="scroll"
+    [loading]="loading()"
+  >
+    <ng-template #header>
+      <tr>
+        <th pSortableColumn="id">ID <p-sort-icon field="id" /></th>
+        <th pSortableColumn="lastName">Nom <p-sort-icon field="lastName" /></th>
+        <th pSortableColumn="email">Email <p-sort-icon field="email" /></th>
+        <th pSortableColumn="role">Rôle <p-sort-icon field="role" /></th>
+        <th>Statut</th>
+        <th>Actions</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-user>
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.firstName }} {{ user.lastName }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ user.role }}</td>
+        <td>
+          <p-tag [value]="user.enabled ? 'Actif' : 'Désactivé'" [severity]="userStatusSeverity(user)" />
+        </td>
+        <td class="actions">
+          <button class="edit-icon" type="button" (click)="editUser(user)" [attr.aria-label]="'Modifier ' + user.firstName + ' ' + user.lastName" title="Modifier">
+            ✎
+          </button>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<p-drawer [(visible)]="drawerVisible" position="right" [style]="{ width: 'min(100vw, 440px)' }" (onHide)="closeDrawer()">
+  @if (creatingUser()) {
+    <div class="drawer-content">
+      <div class="drawer-heading">
+        <p class="eyebrow">Nouvel utilisateur</p>
+        <h2>Ajouter un compte</h2>
+        <p>L’identifiant sera généré automatiquement par la base de données.</p>
+      </div>
+
+      <form class="user-form" #createForm>
+        <label for="create-username">Nom d'utilisateur</label>
+        <input pInputText id="create-username" name="username" minlength="3" required />
+
+        <label for="create-firstName">Prénom</label>
+        <input pInputText id="create-firstName" name="firstName" required />
+
+        <label for="create-lastName">Nom de famille</label>
+        <input pInputText id="create-lastName" name="lastName" required />
+
+        <label for="create-email">E-mail</label>
+        <input pInputText id="create-email" name="email" type="email" required />
+
+        <label for="create-role">Rôle</label>
+        <select id="create-role" name="role" required>
+          <option value="USER">USER</option>
+          <option value="PATIENT">PATIENT</option>
+          <option value="DENTIST">DENTIST</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+
+        <label for="create-password">Mot de passe temporaire</label>
+        <input id="create-password" name="password" type="password" minlength="8" autocomplete="new-password" required />
+
+        <label for="create-confirmPassword">Confirmer le mot de passe</label>
+        <input id="create-confirmPassword" name="confirmPassword" type="password" minlength="8" autocomplete="new-password" required />
+
+        <div class="drawer-actions">
+          <button class="small-button primary" type="button" [disabled]="saving()" (click)="createUser(createForm)">
+            {{ saving() ? 'Création…' : 'Créer l’utilisateur' }}
+          </button>
+          <button class="small-button" type="button" [disabled]="saving()" (click)="closeDrawer()">Annuler</button>
+        </div>
+      </form>
+    </div>
+  } @else if (selectedUser(); as user) {
+    <div class="drawer-content">
+      <div class="drawer-heading">
+        <p class="eyebrow">Gestion utilisateur</p>
+        <h2>Modifier {{ user.firstName }}</h2>
+        <p>L’identifiant <strong>#{{ user.id }}</strong> est conservé et ne peut pas être modifié.</p>
+      </div>
+
+      <form class="user-form" #editForm>
+        <label for="username">Nom d'utilisateur</label>
+        <input pInputText id="username" name="username" [value]="user.username" required />
+
+        <label for="firstName">Prénom</label>
+        <input pInputText id="firstName" name="firstName" [value]="user.firstName" required />
+
+        <label for="lastName">Nom de famille</label>
+        <input pInputText id="lastName" name="lastName" [value]="user.lastName" required />
+
+        <label for="email">E-mail</label>
+        <input pInputText id="email" name="email" type="email" [value]="user.email" required />
+
+        <label for="role">Rôle</label>
+        <select id="role" name="role" [value]="user.role" required>
+          <option value="USER">USER</option>
+          <option value="PATIENT">PATIENT</option>
+          <option value="DENTIST">DENTIST</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+
+        <div class="drawer-actions">
+          <button class="small-button primary" type="button" [disabled]="pendingId() === user.id" (click)="saveUser(editForm)">
+            {{ pendingId() === user.id ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+          <button class="small-button" type="button" (click)="closeDrawer()">Annuler</button>
+        </div>
+      </form>
+
+      <div class="danger-zone">
+        <h3>Désactiver le compte</h3>
+        <p>Le compte est conservé pour l’historique, mais l’utilisateur ne pourra plus se connecter.</p>
+        <button class="small-button danger" type="button" [disabled]="!user.enabled || pendingId() === user.id" (click)="deleteUser(user)">
+          {{ user.enabled ? 'Désactiver l’utilisateur' : 'Compte désactivé' }}
+        </button>
+      </div>
+    </div>
+  }
+</p-drawer>
