@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { UsersService } from '../../services/users.service';
 
@@ -13,6 +13,12 @@ export class Navbar {
   protected readonly usersService = inject(UsersService);
   readonly collapsedChange = output<boolean>();
   readonly collapsed = signal(false);
+
+  /** Personnel du cabinet : seuls ces roles voient patients et rendez-vous. */
+  readonly isStaff = computed(() => {
+    const role = this.usersService.user()?.role;
+    return role === 'ADMIN' || role === 'DENTIST';
+  });
 
   toggleSidebar(): void {
     const nextValue = !this.collapsed();

@@ -1,0 +1,150 @@
+<section class="page">
+  <a class="back-link" routerLink="/patients">← Retour à la liste des patients</a>
+
+  @if (error()) {
+    <div class="page-card">
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    </div>
+  } @else if (loading()) {
+    <div class="page-card">
+      <p class="empty-state">Chargement du dossier…</p>
+    </div>
+  } @else if (record(); as data) {
+    <div class="page-card">
+      <div class="page-toolbar">
+        <div>
+          <p class="eyebrow">Dossier patient</p>
+          <h1>{{ data.patient.fullName }}</h1>
+        </div>
+        <p-tag
+          [value]="data.patient.active ? 'Dossier actif' : 'Dossier archivé'"
+          [severity]="data.patient.active ? 'success' : 'danger'"
+        />
+      </div>
+
+      <dl class="detail-list">
+        <div>
+          <dt>E-mail</dt>
+          <dd>{{ data.patient.email }}</dd>
+        </div>
+        <div>
+          <dt>Téléphone</dt>
+          <dd>{{ data.patient.phoneNumber ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Date de naissance</dt>
+          <dd>
+            {{ data.patient.birthDate ? (data.patient.birthDate | date: 'dd/MM/yyyy') : '—' }}
+            @if (data.patient.age !== null) {
+              <span class="muted">({{ data.patient.age }} ans)</span>
+            }
+          </dd>
+        </div>
+        <div>
+          <dt>Numéro national</dt>
+          <dd>{{ data.patient.nationalNumber ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Adresse</dt>
+          <dd>{{ data.patient.address ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Ville</dt>
+          <dd>{{ data.patient.postalCode ?? '' }} {{ data.patient.city ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>IBAN</dt>
+          <dd>{{ data.patient.iban ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Dossier créé le</dt>
+          <dd>{{ data.patient.createdAt ? (data.patient.createdAt | date: 'dd/MM/yyyy') : '—' }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="stat-grid" style="max-width: 1440px; margin-inline: auto">
+      <div class="stat-card">
+        <p class="stat-label">Rendez-vous</p>
+        <p class="stat-value">{{ data.stats.totalAppointments }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Soins réalisés</p>
+        <p class="stat-value">{{ data.stats.completedAppointments }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">À venir</p>
+        <p class="stat-value">{{ data.stats.upcomingAppointments }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Annulés</p>
+        <p class="stat-value">{{ data.stats.cancelledAppointments }}</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Total facturé</p>
+        <p class="stat-value">{{ data.stats.totalBilled | number: '1.2-2' }} €</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Prochain rendez-vous</p>
+        <p class="stat-value" style="font-size: 1.05rem">
+          {{ data.stats.nextAppointment ? (data.stats.nextAppointment | date: 'dd/MM/yyyy HH:mm') : 'Aucun' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="page-card">
+      <p class="eyebrow">Suivi médical</p>
+      <h2 style="margin: 0 0 6px">Notes</h2>
+      <div class="notes-block">{{ data.patient.medicalNotes ?? 'Aucune note médicale enregistrée.' }}</div>
+    </div>
+
+    <div class="page-card">
+      <p class="eyebrow">Historique</p>
+      <h2 style="margin: 0 0 14px">Épisodes de soins</h2>
+
+      <p-table [value]="data.appointments" [paginator]="data.appointments.length > 10" [rows]="10" responsiveLayout="scroll">
+        <ng-template #header>
+          <tr>
+            <th>Date</th>
+            <th>Soin</th>
+            <th>Dentiste</th>
+            <th>Motif</th>
+            <th>Durée</th>
+            <th>Montant</th>
+            <th>Statut</th>
+          </tr>
+        </ng-template>
+
+        <ng-template #body let-appointment>
+          <tr>
+            <td>{{ appointment.appointmentDate | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ appointment.treatmentName ?? '—' }}</td>
+            <td>{{ appointment.dentistName }}</td>
+            <td>
+              {{ appointment.reason ?? '—' }}
+              @if (appointment.cancellationReason) {
+                <br />
+                <span class="muted">Annulé : {{ appointment.cancellationReason }}</span>
+              }
+            </td>
+            <td>{{ appointment.durationMinutes }} min</td>
+            <td>
+              {{ appointment.treatmentPrice !== null ? (appointment.treatmentPrice | number: '1.2-2') + ' €' : '—' }}
+            </td>
+            <td>
+              <p-tag [value]="statusLabel(appointment.status)" [severity]="statusSeverity(appointment.status)" />
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="7">
+              <p class="empty-state">Aucun épisode de soins enregistré pour ce patient.</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  }
+</section>

@@ -1,4 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Drawer } from 'primeng/drawer';
 import { InputText } from 'primeng/inputtext';
 import { SortIcon, TableModule } from 'primeng/table';
@@ -8,12 +10,14 @@ import { User } from '../../../models/auth.models';
 
 @Component({
   selector: 'app-admin-user',
-  imports: [Drawer, InputText, TableModule, SortIcon, Tag],
+  imports: [ConfirmDialog, Drawer, InputText, TableModule, SortIcon, Tag],
+  providers: [ConfirmationService],
   templateUrl: './admin.user.html',
   styleUrls: ['./admin.user.css'],
 })
 export class AdminUser {
   private readonly usersService = inject(UsersService);
+  private readonly confirmationService = inject(ConfirmationService);
   readonly users = signal<User[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -122,11 +126,26 @@ export class AdminUser {
     });
   }
 
+  /** Demande confirmation via la boite de dialogue PrimeNG, puis desactive. */
+  confirmDisableUser(user: User, event: Event): void {
+    if (!user.enabled) {
+      return;
+    }
+
+    this.confirmationService.confirm({
+      target: event.target as EventTarget,
+      header: 'Désactiver le compte',
+      message: `Désactiver le compte de ${user.firstName} ${user.lastName} ? Il ne pourra plus se connecter.`,
+      acceptLabel: 'Désactiver',
+      rejectLabel: 'Annuler',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.disableUser(user),
+    });
+  }
+
   disableUser(user: User): void {
-    if (
-      !user.enabled ||
-      !window.confirm(`Désactiver le compte de ${user.firstName} ${user.lastName} ?`)
-    ) {
+    if (!user.enabled) {
       return;
     }
 
@@ -145,8 +164,8 @@ export class AdminUser {
     });
   }
 
-  deleteUser(user: User): void {
-    this.disableUser(user);
+  deleteUser(user: User, event: Event): void {
+    this.confirmDisableUser(user, event);
   }
 
   userStatusSeverity(user: User): 'success' | 'danger' {

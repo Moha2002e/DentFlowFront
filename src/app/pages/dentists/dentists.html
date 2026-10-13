@@ -1,0 +1,196 @@
+<section class="page">
+  <div class="page-card">
+    <div class="page-toolbar">
+      <div>
+        <p class="eyebrow">Cabinet</p>
+        <h1>Dentistes</h1>
+      </div>
+      <div class="toolbar-actions">
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Rechercher un nom ou une spécialité…"
+          aria-label="Rechercher un dentiste"
+          (change)="onSearch($any($event.target).value)"
+        />
+        @if (isAdmin()) {
+          <button class="action-button" type="button" (click)="openCreate()">+ Nouveau dentiste</button>
+        }
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    <p-table
+      [value]="dentists()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[5, 10, 20]"
+      responsiveLayout="scroll"
+      [loading]="loading()"
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="lastName">Praticien <p-sort-icon field="lastName" /></th>
+          <th pSortableColumn="specialization">Spécialité <p-sort-icon field="specialization" /></th>
+          <th>E-mail</th>
+          <th>Téléphone</th>
+          <th>INAMI</th>
+          <th>Ville</th>
+          <th>Statut</th>
+          @if (isAdmin()) {
+            <th>Actions</th>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-dentist>
+        <tr>
+          <td>{{ dentist.fullName }}</td>
+          <td>{{ dentist.specialization ?? '—' }}</td>
+          <td>{{ dentist.email }}</td>
+          <td>{{ dentist.phoneNumber ?? '—' }}</td>
+          <td>{{ dentist.inami ?? '—' }}</td>
+          <td>{{ dentist.city ?? '—' }}</td>
+          <td>
+            <p-tag
+              [value]="dentist.active ? 'Actif' : 'Désactivé'"
+              [severity]="dentist.active ? 'success' : 'danger'"
+            />
+          </td>
+          @if (isAdmin()) {
+            <td class="row-actions">
+              <button
+                class="icon-button"
+                type="button"
+                (click)="openEdit(dentist)"
+                [attr.aria-label]="'Modifier ' + dentist.fullName"
+                title="Modifier"
+              >✎</button>
+              @if (dentist.active) {
+                <button
+                  class="icon-button danger"
+                  type="button"
+                  [disabled]="pendingId() === dentist.id"
+                  (click)="confirmDeactivate(dentist, $event)"
+                  [attr.aria-label]="'Désactiver ' + dentist.fullName"
+                  title="Désactiver"
+                >⌫</button>
+              } @else {
+                <button
+                  class="icon-button"
+                  type="button"
+                  [disabled]="pendingId() === dentist.id"
+                  (click)="activate(dentist)"
+                  [attr.aria-label]="'Réactiver ' + dentist.fullName"
+                  title="Réactiver"
+                >↺</button>
+              }
+            </td>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td [attr.colspan]="isAdmin() ? 8 : 7">
+            <p class="empty-state">Aucun dentiste ne correspond à cette recherche.</p>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</section>
+
+<p-confirmdialog />
+
+<p-drawer
+  [(visible)]="drawerVisible"
+  position="right"
+  [style]="{ width: 'min(100vw, 560px)' }"
+  (onHide)="closeDrawer()"
+>
+  <div class="drawer-panel">
+    <div class="drawer-heading">
+      <p class="eyebrow">{{ editedDentist() ? 'Modification' : 'Nouveau praticien' }}</p>
+      <h2>{{ editedDentist() ? editedDentist()!.fullName : 'Ajouter un dentiste' }}</h2>
+      <p>Les champs marqués d’une étoile sont obligatoires.</p>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div>
+        <label for="dentist-firstName">Prénom *</label>
+        <input id="dentist-firstName" formControlName="firstName" autocomplete="given-name" />
+        @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+          <p class="field-error">Le prénom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="dentist-lastName">Nom *</label>
+        <input id="dentist-lastName" formControlName="lastName" autocomplete="family-name" />
+        @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+          <p class="field-error">Le nom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="dentist-email">E-mail *</label>
+        <input id="dentist-email" type="email" formControlName="email" autocomplete="email" />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <p class="field-error">Saisissez une adresse e-mail valide.</p>
+        }
+      </div>
+
+      <div>
+        <label for="dentist-phone">Téléphone</label>
+        <input id="dentist-phone" formControlName="phoneNumber" autocomplete="tel" />
+      </div>
+
+      <div>
+        <label for="dentist-specialization">Spécialisation</label>
+        <input id="dentist-specialization" formControlName="specialization" placeholder="Orthodontie, implantologie…" />
+      </div>
+
+      <div>
+        <label for="dentist-inami">Numéro INAMI</label>
+        <input id="dentist-inami" formControlName="inami" />
+      </div>
+
+      <div class="full-width">
+        <label for="dentist-address">Adresse</label>
+        <input id="dentist-address" formControlName="address" autocomplete="street-address" />
+      </div>
+
+      <div>
+        <label for="dentist-postalCode">Code postal</label>
+        <input id="dentist-postalCode" formControlName="postalCode" autocomplete="postal-code" />
+      </div>
+
+      <div>
+        <label for="dentist-city">Ville</label>
+        <input id="dentist-city" formControlName="city" autocomplete="address-level2" />
+      </div>
+
+      <div class="full-width">
+        <label for="dentist-iban">IBAN</label>
+        <input id="dentist-iban" formControlName="iban" />
+      </div>
+
+      <div class="drawer-footer full-width">
+        <button class="action-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+        <button class="action-button ghost" type="button" [disabled]="saving()" (click)="closeDrawer()">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</p-drawer>

@@ -1,0 +1,389 @@
+<section class="page">
+  <div class="stat-grid" style="max-width: 1440px; margin-inline: auto">
+    <div class="stat-card">
+      <p class="stat-label">Total</p>
+      <p class="stat-value">{{ stats().total }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">À venir</p>
+      <p class="stat-value">{{ stats().upcoming }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Réalisés</p>
+      <p class="stat-value">{{ stats().completed }}</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Annulés</p>
+      <p class="stat-value">{{ stats().cancelled }}</p>
+    </div>
+  </div>
+
+  <div class="page-card">
+    <div class="page-toolbar">
+      <div>
+        <p class="eyebrow">Planning</p>
+        <h1>Rendez-vous</h1>
+      </div>
+      <div class="toolbar-actions">
+        <div class="view-switch" role="group" aria-label="Choisir l’affichage">
+          <button
+            type="button"
+            [class.active]="view() === 'list'"
+            [attr.aria-pressed]="view() === 'list'"
+            (click)="switchView('list')"
+          >Liste</button>
+          <button
+            type="button"
+            [class.active]="view() === 'calendar'"
+            [attr.aria-pressed]="view() === 'calendar'"
+            (click)="switchView('calendar')"
+          >Calendrier</button>
+        </div>
+
+        @if (view() === 'list') {
+          <select
+            class="search-input"
+            aria-label="Filtrer par statut"
+            (change)="onStatusFilter($any($event.target).value)"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="SCHEDULED">Planifiés</option>
+            <option value="RESCHEDULED">Reportés</option>
+            <option value="COMPLETED">Réalisés</option>
+            <option value="CANCELLED">Annulés</option>
+          </select>
+        }
+        <button class="action-button" type="button" (click)="openCreate()">+ Nouveau rendez-vous</button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    @if (view() === 'calendar') {
+      <div class="calendar-layout">
+        <div class="calendar-side">
+          <p-datepicker
+            [(ngModel)]="pickedDate"
+            [inline]="true"
+            [showWeek]="true"
+            [firstDayOfWeek]="1"
+            (onSelect)="onDateSelect($event)"
+            (onMonthChange)="onMonthChange($event)"
+            styleClass="dentflow-calendar"
+          >
+            <ng-template #date let-day>
+              <span class="cal-day" [class.has-rdv]="countFor(day) > 0">
+                {{ day.day }}
+                @if (countFor(day) > 0) {
+                  <span class="cal-dot" [attr.aria-label]="countFor(day) + ' rendez-vous'">{{ countFor(day) }}</span>
+                }
+              </span>
+            </ng-template>
+          </p-datepicker>
+
+          <p class="calendar-legend">
+            <span class="cal-dot cal-dot-legend">n</span> rendez-vous actifs ce jour-là
+          </p>
+        </div>
+
+        <div class="calendar-agenda">
+          <h2>Agenda du {{ selectedDate() | date: 'EEEE d MMMM yyyy' }}</h2>
+
+          @if (calendarLoading()) {
+            <p class="empty-state">Chargement…</p>
+          } @else if (dayAppointments().length === 0) {
+            <p class="empty-state">Aucun rendez-vous ce jour-là.</p>
+          } @else {
+            <p-timeline [value]="dayAppointments()" align="left" styleClass="dentflow-timeline">
+              <ng-template #opposite let-appointment>
+                <span class="agenda-time">{{ appointment.appointmentDate | date: 'HH:mm' }}</span>
+              </ng-template>
+
+              <ng-template #marker let-appointment>
+                <span class="agenda-marker" [class]="'marker-' + appointment.status"></span>
+              </ng-template>
+
+              <ng-template #content let-appointment>
+                <div class="agenda-card" [class.is-cancelled]="appointment.status === 'CANCELLED'">
+                  <div class="agenda-head">
+                    <strong>{{ appointment.patientName }}</strong>
+                    <p-tag
+                      [value]="statusLabel(appointment.status)"
+                      [severity]="statusSeverity(appointment.status)"
+                    />
+                  </div>
+                  <p class="agenda-line">{{ appointment.treatmentName ?? 'Sans soin prédéfini' }}</p>
+                  <p class="agenda-line muted">
+                    {{ appointment.dentistName }} · {{ appointment.durationMinutes }} min
+                    @if (appointment.treatmentPrice !== null) {
+                      · {{ appointment.treatmentPrice | number: '1.2-2' }} €
+                    }
+                  </p>
+                  @if (appointment.reason) {
+                    <p class="agenda-line muted">{{ appointment.reason }}</p>
+                  }
+                  @if (appointment.cancellationReason) {
+                    <p class="agenda-line muted">Annulé : {{ appointment.cancellationReason }}</p>
+                  }
+
+                  <div class="agenda-actions">
+                    <button
+                      class="icon-button"
+                      type="button"
+                      [disabled]="!appointment.canEdit"
+                      (click)="openEdit(appointment)"
+                      [attr.aria-label]="'Modifier le rendez-vous de ' + appointment.patientName"
+                      title="Modifier / reporter"
+                    >✎</button>
+                    @if (appointment.canComplete) {
+                      <button
+                        class="icon-button"
+                        type="button"
+                        [disabled]="pendingId() === appointment.id"
+                        (click)="confirmComplete(appointment, $event)"
+                        [attr.aria-label]="'Marquer réalisé le rendez-vous de ' + appointment.patientName"
+                        title="Marquer comme réalisé"
+                      >✓</button>
+                    }
+                    @if (appointment.canCancel) {
+                      <button
+                        class="icon-button danger"
+                        type="button"
+                        [disabled]="pendingId() === appointment.id"
+                        (click)="openCancelDialog(appointment)"
+                        [attr.aria-label]="'Annuler le rendez-vous de ' + appointment.patientName"
+                        title="Annuler"
+                      >✕</button>
+                    }
+                  </div>
+                </div>
+              </ng-template>
+            </p-timeline>
+          }
+        </div>
+      </div>
+    } @else {
+
+    <p-table
+      [value]="appointments()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[5, 10, 20]"
+      responsiveLayout="scroll"
+      [loading]="loading()"
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="appointmentDate">Date <p-sort-icon field="appointmentDate" /></th>
+          <th pSortableColumn="patientName">Patient <p-sort-icon field="patientName" /></th>
+          <th pSortableColumn="dentistName">Dentiste <p-sort-icon field="dentistName" /></th>
+          <th>Soin</th>
+          <th>Durée</th>
+          <th>Montant</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-appointment>
+        <tr>
+          <td>{{ appointment.appointmentDate | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ appointment.patientName }}</td>
+          <td>{{ appointment.dentistName }}</td>
+          <td>
+            {{ appointment.treatmentName ?? '—' }}
+            @if (appointment.reason) {
+              <br /><span class="muted">{{ appointment.reason }}</span>
+            }
+          </td>
+          <td>{{ appointment.durationMinutes }} min</td>
+          <td>
+            {{ appointment.treatmentPrice !== null ? (appointment.treatmentPrice | number: '1.2-2') + ' €' : '—' }}
+          </td>
+          <td>
+            <p-tag [value]="statusLabel(appointment.status)" [severity]="statusSeverity(appointment.status)" />
+            @if (appointment.cancellationReason) {
+              <br /><span class="muted">{{ appointment.cancellationReason }}</span>
+            }
+          </td>
+          <td class="row-actions">
+            <button
+              class="icon-button"
+              type="button"
+              [disabled]="!appointment.canEdit"
+              (click)="openEdit(appointment)"
+              [attr.aria-label]="'Modifier le rendez-vous de ' + appointment.patientName"
+              title="Modifier / reporter"
+            >✎</button>
+            @if (appointment.canComplete) {
+              <button
+                class="icon-button"
+                type="button"
+                [disabled]="pendingId() === appointment.id"
+                (click)="confirmComplete(appointment, $event)"
+                [attr.aria-label]="'Marquer réalisé le rendez-vous de ' + appointment.patientName"
+                title="Marquer comme réalisé"
+              >✓</button>
+            }
+            @if (appointment.canCancel) {
+              <button
+                class="icon-button danger"
+                type="button"
+                [disabled]="pendingId() === appointment.id"
+                (click)="openCancelDialog(appointment)"
+                [attr.aria-label]="'Annuler le rendez-vous de ' + appointment.patientName"
+                title="Annuler"
+              >✕</button>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="8">
+            <p class="empty-state">Aucun rendez-vous pour ce filtre.</p>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    }
+  </div>
+</section>
+
+<p-confirmdialog />
+
+<p-dialog
+  header="Annuler le rendez-vous"
+  [(visible)]="cancelDialogVisible"
+  [modal]="true"
+  [style]="{ width: 'min(100vw, 460px)' }"
+  (onHide)="closeCancelDialog()"
+>
+  @if (cancelTarget(); as appointment) {
+    <p style="margin-top: 0; color: #60777f; line-height: 1.6">
+      Rendez-vous de <strong>{{ appointment.patientName }}</strong> avec {{ appointment.dentistName }}
+      le {{ appointment.appointmentDate | date: 'dd/MM/yyyy à HH:mm' }}.
+    </p>
+
+    <div class="form-grid">
+      <div class="full-width">
+        <label for="cancel-reason">Motif de l’annulation</label>
+        <textarea
+          id="cancel-reason"
+          [(ngModel)]="cancellationReason"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="Patient souffrant, report à sa demande…"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <button
+        class="action-button danger"
+        type="button"
+        [disabled]="pendingId() === appointment.id"
+        (click)="confirmCancel()"
+      >
+        {{ pendingId() === appointment.id ? 'Annulation…' : 'Confirmer l’annulation' }}
+      </button>
+      <button class="action-button ghost" type="button" (click)="closeCancelDialog()">Fermer</button>
+    </div>
+  }
+</p-dialog>
+
+<p-drawer
+  [(visible)]="drawerVisible"
+  position="right"
+  [style]="{ width: 'min(100vw, 560px)' }"
+  (onHide)="closeDrawer()"
+>
+  <div class="drawer-panel">
+    <div class="drawer-heading">
+      <p class="eyebrow">{{ editedAppointment() ? 'Modification' : 'Nouveau rendez-vous' }}</p>
+      <h2>{{ editedAppointment() ? 'Modifier le rendez-vous' : 'Planifier un rendez-vous' }}</h2>
+      <p>Un créneau déjà occupé par le même dentiste sera refusé.</p>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="full-width">
+        <label for="appointment-patient">Patient *</label>
+        <select id="appointment-patient" formControlName="patientId">
+          <option [ngValue]="null">— Sélectionner un patient —</option>
+          @for (patient of patients(); track patient.id) {
+            <option [ngValue]="patient.id">{{ patient.fullName }} ({{ patient.email }})</option>
+          }
+        </select>
+        @if (form.controls.patientId.touched && form.controls.patientId.invalid) {
+          <p class="field-error">Choisissez un patient.</p>
+        }
+      </div>
+
+      <div class="full-width">
+        <label for="appointment-dentist">Dentiste *</label>
+        <select id="appointment-dentist" formControlName="dentistId">
+          <option [ngValue]="null">— Sélectionner un dentiste —</option>
+          @for (dentist of dentists(); track dentist.id) {
+            <option [ngValue]="dentist.id">
+              {{ dentist.fullName }}@if (dentist.specialization) { — {{ dentist.specialization }} }
+            </option>
+          }
+        </select>
+        @if (form.controls.dentistId.touched && form.controls.dentistId.invalid) {
+          <p class="field-error">Choisissez un dentiste.</p>
+        }
+      </div>
+
+      <div class="full-width">
+        <label for="appointment-treatment">Soin</label>
+        <select id="appointment-treatment" (change)="onTreatmentChange($any($event.target).value)">
+          <option value="">— Aucun soin prédéfini —</option>
+          @for (treatment of treatments(); track treatment.id) {
+            <option [value]="treatment.id" [selected]="form.controls.treatmentId.value === treatment.id">
+              {{ treatment.name }} — {{ treatment.price | number: '1.2-2' }} €
+            </option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label for="appointment-date">Date et heure *</label>
+        <input id="appointment-date" type="datetime-local" formControlName="appointmentDate" />
+        @if (form.controls.appointmentDate.touched && form.controls.appointmentDate.invalid) {
+          <p class="field-error">La date du rendez-vous est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="appointment-duration">Durée (minutes)</label>
+        <input id="appointment-duration" type="number" min="5" max="480" step="5" formControlName="durationMinutes" />
+      </div>
+
+      <div class="full-width">
+        <label for="appointment-reason">Motif</label>
+        <input id="appointment-reason" formControlName="reason" placeholder="Contrôle annuel, douleur…" />
+      </div>
+
+      <div class="full-width">
+        <label for="appointment-notes">Notes</label>
+        <textarea id="appointment-notes" formControlName="notes"></textarea>
+      </div>
+
+      <div class="drawer-footer full-width">
+        <button class="action-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+        <button class="action-button ghost" type="button" [disabled]="saving()" (click)="closeDrawer()">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</p-drawer>

@@ -21,3 +21,22 @@ export const adminGuard: CanActivateFn = () => {
     ? true
     : router.createUrlTree(['/home']);
 };
+
+/**
+ * Personnel du cabinet : administrateurs et praticiens.
+ * Reflete le @PreAuthorize("hasAnyRole('ADMIN', 'DENTIST')") des controleurs
+ * patients et rendez-vous, pour eviter d'afficher un ecran qui finirait en 403.
+ */
+export const staffGuard: CanActivateFn = () => {
+  const usersService = inject(UsersService);
+  const router = inject(Router);
+
+  if (!usersService.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  const role = usersService.getUserRole();
+  return role === 'ADMIN' || role === 'DENTIST'
+    ? true
+    : router.createUrlTree(['/home']);
+};

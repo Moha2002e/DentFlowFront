@@ -1,0 +1,207 @@
+<section class="page">
+  <div class="page-card">
+    <div class="page-toolbar">
+      <div>
+        <p class="eyebrow">Cabinet</p>
+        <h1>Patients</h1>
+      </div>
+      <div class="toolbar-actions">
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Rechercher un nom ou un e-mail…"
+          aria-label="Rechercher un patient"
+          (change)="onSearch($any($event.target).value)"
+        />
+        <button class="action-button" type="button" (click)="openCreate()">+ Nouveau patient</button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    <p-table
+      [value]="patients()"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[5, 10, 20]"
+      responsiveLayout="scroll"
+      [loading]="loading()"
+    >
+      <ng-template #header>
+        <tr>
+          <th pSortableColumn="lastName">Patient <p-sort-icon field="lastName" /></th>
+          <th pSortableColumn="email">E-mail <p-sort-icon field="email" /></th>
+          <th>Téléphone</th>
+          <th pSortableColumn="age">Âge <p-sort-icon field="age" /></th>
+          <th>Ville</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template #body let-patient>
+        <tr>
+          <td>
+            <a class="back-link" style="margin: 0" [routerLink]="['/patients', patient.id]">
+              {{ patient.fullName }}
+            </a>
+          </td>
+          <td>{{ patient.email }}</td>
+          <td>{{ patient.phoneNumber ?? '—' }}</td>
+          <td>{{ patient.age !== null ? patient.age + ' ans' : '—' }}</td>
+          <td>{{ patient.city ?? '—' }}</td>
+          <td>
+            <p-tag
+              [value]="patient.active ? 'Actif' : 'Archivé'"
+              [severity]="patient.active ? 'success' : 'danger'"
+            />
+          </td>
+          <td class="row-actions">
+            <a
+              class="icon-button"
+              [routerLink]="['/patients', patient.id]"
+              [attr.aria-label]="'Ouvrir le dossier de ' + patient.fullName"
+              title="Ouvrir le dossier"
+            >⤢</a>
+            <button
+              class="icon-button"
+              type="button"
+              (click)="openEdit(patient)"
+              [attr.aria-label]="'Modifier ' + patient.fullName"
+              title="Modifier"
+            >✎</button>
+            @if (patient.active) {
+              <button
+                class="icon-button danger"
+                type="button"
+                [disabled]="pendingId() === patient.id"
+                (click)="confirmArchive(patient, $event)"
+                [attr.aria-label]="'Archiver ' + patient.fullName"
+                title="Archiver"
+              >⌫</button>
+            } @else {
+              <button
+                class="icon-button"
+                type="button"
+                [disabled]="pendingId() === patient.id"
+                (click)="restore(patient)"
+                [attr.aria-label]="'Réactiver ' + patient.fullName"
+                title="Réactiver"
+              >↺</button>
+            }
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="7">
+            <p class="empty-state">Aucun patient ne correspond à cette recherche.</p>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</section>
+
+<p-confirmdialog />
+
+<p-drawer
+  [(visible)]="drawerVisible"
+  position="right"
+  [style]="{ width: 'min(100vw, 560px)' }"
+  (onHide)="closeDrawer()"
+>
+  <div class="drawer-panel">
+    <div class="drawer-heading">
+      <p class="eyebrow">{{ editedPatient() ? 'Modification' : 'Nouveau dossier' }}</p>
+      <h2>{{ editedPatient() ? editedPatient()!.fullName : 'Ajouter un patient' }}</h2>
+      <p>Les champs marqués d’une étoile sont obligatoires.</p>
+    </div>
+
+    @if (error()) {
+      <p class="alert alert-error" role="alert">{{ error() }}</p>
+    }
+
+    <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div>
+        <label for="patient-firstName">Prénom *</label>
+        <input id="patient-firstName" formControlName="firstName" autocomplete="given-name" />
+        @if (form.controls.firstName.touched && form.controls.firstName.invalid) {
+          <p class="field-error">Le prénom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="patient-lastName">Nom *</label>
+        <input id="patient-lastName" formControlName="lastName" autocomplete="family-name" />
+        @if (form.controls.lastName.touched && form.controls.lastName.invalid) {
+          <p class="field-error">Le nom est obligatoire.</p>
+        }
+      </div>
+
+      <div>
+        <label for="patient-email">E-mail *</label>
+        <input id="patient-email" type="email" formControlName="email" autocomplete="email" />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <p class="field-error">Saisissez une adresse e-mail valide.</p>
+        }
+      </div>
+
+      <div>
+        <label for="patient-phone">Téléphone</label>
+        <input id="patient-phone" formControlName="phoneNumber" autocomplete="tel" />
+      </div>
+
+      <div>
+        <label for="patient-birthDate">Date de naissance</label>
+        <input id="patient-birthDate" type="date" formControlName="birthDate" />
+      </div>
+
+      <div>
+        <label for="patient-nationalNumber">Numéro national</label>
+        <input id="patient-nationalNumber" formControlName="nationalNumber" />
+      </div>
+
+      <div class="full-width">
+        <label for="patient-address">Adresse</label>
+        <input id="patient-address" formControlName="address" autocomplete="street-address" />
+      </div>
+
+      <div>
+        <label for="patient-postalCode">Code postal</label>
+        <input id="patient-postalCode" formControlName="postalCode" autocomplete="postal-code" />
+      </div>
+
+      <div>
+        <label for="patient-city">Ville</label>
+        <input id="patient-city" formControlName="city" autocomplete="address-level2" />
+      </div>
+
+      <div class="full-width">
+        <label for="patient-iban">IBAN</label>
+        <input id="patient-iban" formControlName="iban" />
+      </div>
+
+      <div class="full-width">
+        <label for="patient-medicalNotes">Notes médicales</label>
+        <textarea
+          id="patient-medicalNotes"
+          formControlName="medicalNotes"
+          placeholder="Antécédents, allergies, traitements en cours…"
+        ></textarea>
+      </div>
+
+      <div class="drawer-footer full-width">
+        <button class="action-button" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Enregistrement…' : 'Enregistrer' }}
+        </button>
+        <button class="action-button ghost" type="button" [disabled]="saving()" (click)="closeDrawer()">
+          Annuler
+        </button>
+      </div>
+    </form>
+  </div>
+</p-drawer>

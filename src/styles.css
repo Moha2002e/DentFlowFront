@@ -185,3 +185,465 @@ h1 {
     padding: 24px 20px;
   }
 }
+
+/* ------------------------------------------------------------------
+   Pages de gestion (patients, dentistes, rendez-vous).
+   Styles communs pour garder une interface claire et homogene.
+   ------------------------------------------------------------------ */
+
+.page {
+  padding: 42px clamp(20px, 5vw, 72px) 72px;
+}
+
+.page-card {
+  max-width: 1440px;
+  margin: 0 auto 28px;
+  padding: clamp(20px, 3vw, 36px);
+  border: 1px solid #d8e7e9;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 50px rgba(29, 72, 82, 0.08);
+}
+
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.page-toolbar h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.page-toolbar .eyebrow {
+  margin-bottom: 4px;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-input {
+  min-width: 240px;
+  padding: 10px 13px;
+  border: 1px solid #bfd3d7;
+  border-radius: 10px;
+  outline: none;
+  background: white;
+  color: #15303a;
+}
+
+.search-input:focus {
+  border-color: #168c88;
+  box-shadow: 0 0 0 3px rgba(22, 140, 136, 0.12);
+}
+
+.action-button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #137d79;
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.action-button:hover:not(:disabled) {
+  background: #0e6966;
+  transform: translateY(-1px);
+}
+
+.action-button.ghost {
+  border: 1px solid #c9dfe1;
+  background: white;
+  color: #49636b;
+  font-weight: 700;
+}
+
+.action-button.ghost:hover:not(:disabled) {
+  border-color: #137d79;
+  background: #e8f7f5;
+  color: #137d79;
+}
+
+.action-button.danger {
+  border: 1px solid #ebcaca;
+  background: white;
+  color: #a34d4d;
+  font-weight: 700;
+}
+
+.action-button.danger:hover:not(:disabled) {
+  background: #fdf3f3;
+  border-color: #d78f8f;
+}
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #c9dfe1;
+  border-radius: 8px;
+  background: white;
+  color: #137d79;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.icon-button + .icon-button {
+  margin-left: 6px;
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: #137d79;
+  background: #e8f7f5;
+}
+
+.icon-button.danger {
+  border-color: #ebcaca;
+  color: #a34d4d;
+}
+
+.icon-button.danger:hover:not(:disabled) {
+  background: #fdf3f3;
+}
+
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+.muted {
+  color: #85989e;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.stat-card {
+  padding: 18px 20px;
+  border: 1px solid #d8e7e9;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 26px rgba(29, 72, 82, 0.06);
+}
+
+.stat-card .stat-label {
+  margin: 0 0 6px;
+  color: #60777f;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stat-card .stat-value {
+  margin: 0;
+  color: #102f39;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.form-grid .full-width {
+  grid-column: 1 / -1;
+}
+
+.form-grid label {
+  display: block;
+  margin-bottom: 6px;
+  color: #274952;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #bfd3d7;
+  border-radius: 8px;
+  outline: none;
+  background: white;
+  color: #15303a;
+  font: inherit;
+}
+
+.form-grid textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  border-color: #168c88;
+  box-shadow: 0 0 0 3px rgba(22, 140, 136, 0.12);
+}
+
+.drawer-panel {
+  display: grid;
+  gap: 22px;
+}
+
+.drawer-panel .drawer-heading h2 {
+  margin: 0;
+  color: #102f39;
+}
+
+.drawer-panel .drawer-heading p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: #60777f;
+  line-height: 1.5;
+}
+
+.drawer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  color: #60777f;
+  text-align: center;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+}
+
+.detail-list dt {
+  color: #60777f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detail-list dd {
+  margin: 4px 0 0;
+  color: #15303a;
+  font-weight: 600;
+}
+
+.notes-block {
+  margin-top: 8px;
+  padding: 16px 18px;
+  border: 1px solid #d8e7e9;
+  border-radius: 12px;
+  background: #f7fbfb;
+  color: #27454d;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #137d79;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------
+   Vue calendrier des rendez-vous : p-datepicker inline + p-timeline.
+   ------------------------------------------------------------------ */
+
+.view-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #c9dfe1;
+  border-radius: 10px;
+  background: white;
+}
+
+.view-switch button {
+  padding: 9px 16px;
+  border: 0;
+  background: transparent;
+  color: #49636b;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.view-switch button + button {
+  border-left: 1px solid #e2edef;
+}
+
+.view-switch button:hover:not(.active) {
+  background: #f1f9f9;
+  color: #137d79;
+}
+
+.view-switch button.active {
+  background: #137d79;
+  color: white;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  gap: 28px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar-side .p-datepicker {
+  width: 100%;
+  border: 1px solid #d8e7e9;
+  border-radius: 14px;
+}
+
+/* Chaque case de jour : le chiffre, et la pastille si des rendez-vous existent. */
+.cal-day {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  width: 100%;
+  line-height: 1.1;
+}
+
+.cal-day.has-rdv {
+  font-weight: 800;
+  color: #0e6966;
+}
+
+.cal-dot {
+  display: grid;
+  min-width: 17px;
+  height: 17px;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #137d79;
+  color: white;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 2px 0;
+  color: #60777f;
+  font-size: 0.85rem;
+}
+
+.cal-dot-legend {
+  background: #137d79;
+}
+
+.calendar-agenda h2 {
+  margin: 0 0 18px;
+  color: #102f39;
+  font-size: 1.15rem;
+  text-transform: capitalize;
+}
+
+.agenda-time {
+  display: block;
+  padding-top: 4px;
+  color: #49636b;
+  font-size: 0.86rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.agenda-marker {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #137d79;
+  box-shadow: 0 0 0 2px #cfe6e5;
+}
+
+.agenda-marker.marker-COMPLETED { background: #2f9e6e; box-shadow: 0 0 0 2px #cdeadd; }
+.agenda-marker.marker-CANCELLED { background: #c0564f; box-shadow: 0 0 0 2px #f0d4d2; }
+.agenda-marker.marker-RESCHEDULED { background: #c9872f; box-shadow: 0 0 0 2px #f2e2c8; }
+
+.agenda-card {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #d8e7e9;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 20px rgba(29, 72, 82, 0.05);
+}
+
+.agenda-card.is-cancelled {
+  background: #fcf7f7;
+  border-color: #ecd9d7;
+}
+
+.agenda-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.agenda-head strong {
+  color: #102f39;
+  font-size: 1rem;
+}
+
+.agenda-line {
+  margin: 0 0 4px;
+  color: #27454d;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.agenda-actions {
+  margin-top: 12px;
+}

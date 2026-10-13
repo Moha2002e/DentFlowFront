@@ -11,6 +11,15 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(routes),
-    providePrimeNG({ theme: { preset: Aura } }),
+    providePrimeNG({
+      theme: {
+        preset: Aura,
+        options: {
+          // DentFlow est une interface claire : sans ce reglage, PrimeNG suit la
+          // preference systeme et rend les composants en sombre sur fond clair.
+          darkModeSelector: false,
+        },
+      },
+    }),
   ],
 };

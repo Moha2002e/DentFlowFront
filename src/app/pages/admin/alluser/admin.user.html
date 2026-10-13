@@ -133,10 +133,12 @@
       <div class="danger-zone">
         <h3>Désactiver le compte</h3>
         <p>Le compte est conservé pour l’historique, mais l’utilisateur ne pourra plus se connecter.</p>
-        <button class="small-button danger" type="button" [disabled]="!user.enabled || pendingId() === user.id" (click)="deleteUser(user)">
+        <button class="small-button danger" type="button" [disabled]="!user.enabled || pendingId() === user.id" (click)="deleteUser(user, $event)">
           {{ user.enabled ? 'Désactiver l’utilisateur' : 'Compte désactivé' }}
         </button>
       </div>
     </div>
   }
 </p-drawer>
+
+<p-confirmdialog />
