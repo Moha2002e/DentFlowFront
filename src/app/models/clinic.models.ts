@@ -101,10 +101,29 @@ export interface AppointmentStats {
   cancelled: number;
 }
 
-/** Nombre de rendez-vous actifs pour une journee, calcule par le backend. */
-export interface CalendarDay {
+/** Grille mensuelle fabriquee par le backend : le front ne fait que l'afficher. */
+export interface CalendarCell {
   date: string;
-  count: number;
+  dayOfMonth: number;
+  inCurrentMonth: boolean;
+  today: boolean;
+  weekend: boolean;
+  appointments: Appointment[];
+}
+
+export interface CalendarWeek {
+  weekNumber: number;
+  days: CalendarCell[];
+}
+
+export interface CalendarMonth {
+  month: string;
+  label: string;
+  previousMonth: string;
+  nextMonth: string;
+  dayHeaders: string[];
+  weeks: CalendarWeek[];
+  totalAppointments: number;
 }
 
 export interface AppointmentRequest {

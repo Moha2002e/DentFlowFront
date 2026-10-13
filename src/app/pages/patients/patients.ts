@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { Drawer } from 'primeng/drawer';
 import { TableModule, SortIcon } from 'primeng/table';
 import { Tag } from 'primeng/tag';
+import { Toast } from 'primeng/toast';
 import { finalize } from 'rxjs';
 import { Patient, PatientRequest } from '../../models/clinic.models';
 import { PatientsService } from '../../services/clinic.service';
@@ -13,8 +14,8 @@ import { UsersService } from '../../services/users.service';
 
 @Component({
   selector: 'app-patients',
-  imports: [ConfirmDialog, Drawer, ReactiveFormsModule, RouterLink, SortIcon, TableModule, Tag],
-  providers: [ConfirmationService],
+  imports: [ConfirmDialog, Drawer, ReactiveFormsModule, RouterLink, SortIcon, TableModule, Tag, Toast],
+  providers: [ConfirmationService, MessageService],
   templateUrl: './patients.html',
 })
 export class Patients {
@@ -22,10 +23,10 @@ export class Patients {
   private readonly usersService = inject(UsersService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
 
   readonly patients = signal<Patient[]>([]);
   readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
   readonly saving = signal(false);
   readonly pendingId = signal<number | null>(null);
   readonly editedPatient = signal<Patient | null>(null);
@@ -59,9 +60,8 @@ export class Patients {
       .subscribe({
         next: (patients) => {
           this.patients.set(patients);
-          this.error.set(null);
-        },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+              },
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -71,7 +71,6 @@ export class Patients {
   }
 
   openCreate(): void {
-    this.error.set(null);
     this.editedPatient.set(null);
     this.form.reset({
       firstName: '',
@@ -90,7 +89,6 @@ export class Patients {
   }
 
   openEdit(patient: Patient): void {
-    this.error.set(null);
     this.editedPatient.set(patient);
     this.form.reset({
       firstName: patient.firstName,
@@ -140,7 +138,6 @@ export class Patients {
       : this.patientsService.create(request);
 
     this.saving.set(true);
-    this.error.set(null);
     call.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (saved) => {
         this.patients.update((patients) =>
@@ -150,7 +147,7 @@ export class Patients {
         );
         this.closeDrawer();
       },
-      error: (error) => this.error.set(this.usersService.errorMessage(error)),
+      error: (error) => this.notifyError(error),
     });
   }
 
@@ -174,7 +171,7 @@ export class Patients {
       .pipe(finalize(() => this.pendingId.set(null)))
       .subscribe({
         next: (updated) => this.replace(updated),
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -185,7 +182,7 @@ export class Patients {
       .pipe(finalize(() => this.pendingId.set(null)))
       .subscribe({
         next: (updated) => this.replace(updated),
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -193,6 +190,16 @@ export class Patients {
     this.patients.update((patients) =>
       patients.map((item) => (item.id === patient.id ? patient : item)),
     );
+  }
+
+  /** Une seule surface d'affichage pour les erreurs : le toast. */
+  private notifyError(error: unknown): void {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: this.usersService.errorMessage(error),
+      life: 6000,
+    });
   }
 
   private emptyToNull(value: string): string | null {

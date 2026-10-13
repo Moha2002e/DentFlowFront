@@ -33,6 +33,11 @@
         }
       </div>
 
+      <div class="remember-row">
+        <p-checkbox inputId="login-remember" formControlName="remember" [binary]="true" />
+        <label for="login-remember">Se souvenir de moi</label>
+      </div>
+
       <button class="primary-button" type="submit" [disabled]="pending()">
         {{ pending() ? 'Connexion...' : 'Se connecter' }}
       </button>

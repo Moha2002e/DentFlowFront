@@ -1,3 +1,5 @@
+<p-toast position="top-right" />
+
 <section class="page">
   <div class="page-card">
     <div class="page-toolbar">
@@ -16,10 +18,6 @@
         <button class="action-button" type="button" (click)="openCreate()">+ Nouveau patient</button>
       </div>
     </div>
-
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
 
     <p-table
       [value]="patients()"
@@ -120,10 +118,6 @@
       <h2>{{ editedPatient() ? editedPatient()!.fullName : 'Ajouter un patient' }}</h2>
       <p>Les champs marqués d’une étoile sont obligatoires.</p>
     </div>
-
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
 
     <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div>

@@ -3,6 +3,8 @@ import { User } from '../models/auth.models';
 
 const TOKEN_KEY = 'dentflow_access_token';
 const USER_KEY = 'dentflow_user';
+/** Adresse memorisee pour pre-remplir le formulaire de connexion. */
+const REMEMBERED_EMAIL_KEY = 'dentflow_remembered_email';
 
 @Injectable({ providedIn: 'root' })
 export class TokenStorageService {
@@ -10,8 +12,18 @@ export class TokenStorageService {
 
   readonly user = this.userState.asReadonly();
 
+  /**
+   * Deux stockages selon le choix de l'utilisateur :
+   * - sessionStorage : la session s'arrete a la fermeture de l'onglet (defaut) ;
+   * - localStorage : « se souvenir de moi », la session survit au navigateur.
+   * La lecture regarde les deux, l'ecriture n'en remplit qu'un seul.
+   */
   get token(): string | null {
-    return sessionStorage.getItem(TOKEN_KEY);
+    return sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY);
+  }
+
+  get rememberedEmail(): string | null {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY);
   }
 
   hasValidToken(): boolean {
@@ -36,20 +48,45 @@ export class TokenStorageService {
     }
   }
 
-  save(token: string, user: User): void {
-    sessionStorage.setItem(TOKEN_KEY, token);
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+  save(token: string, user: User, remember = false): void {
+    // On vide les deux avant d'ecrire : sinon un ancien jeton reste dans l'autre
+    // stockage et ressort a la prochaine lecture.
+    this.removeSession();
+
+    const store = remember ? localStorage : sessionStorage;
+    store.setItem(TOKEN_KEY, token);
+    store.setItem(USER_KEY, JSON.stringify(user));
+
+    if (remember) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, user.email);
+    } else {
+      localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+
     this.userState.set(user);
   }
 
+  /** Deconnexion : le jeton part, l'adresse memorisee reste pour le prochain retour. */
   clear(): void {
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
+    this.removeSession();
     this.userState.set(null);
   }
 
+  /** Oublie aussi l'adresse pre-remplie. */
+  forgetMe(): void {
+    this.clear();
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+  }
+
+  private removeSession(): void {
+    for (const store of [sessionStorage, localStorage]) {
+      store.removeItem(TOKEN_KEY);
+      store.removeItem(USER_KEY);
+    }
+  }
+
   private readUser(): User | null {
-    const storedUser = sessionStorage.getItem(USER_KEY);
+    const storedUser = sessionStorage.getItem(USER_KEY) ?? localStorage.getItem(USER_KEY);
     if (!storedUser) {
       return null;
     }
@@ -57,7 +94,7 @@ export class TokenStorageService {
     try {
       return JSON.parse(storedUser) as User;
     } catch {
-      sessionStorage.removeItem(USER_KEY);
+      this.removeSession();
       return null;
     }
   }

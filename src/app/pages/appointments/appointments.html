@@ -1,5 +1,7 @@
+<p-toast position="top-right" />
+
 <section class="page">
-  <div class="stat-grid" style="max-width: 1440px; margin-inline: auto">
+  <div class="stat-grid">
     <div class="stat-card">
       <p class="stat-label">Total</p>
       <p class="stat-value">{{ stats().total }}</p>
@@ -57,113 +59,98 @@
       </div>
     </div>
 
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
-
     @if (view() === 'calendar') {
-      <div class="calendar-layout">
-        <div class="calendar-side">
-          <p-datepicker
-            [(ngModel)]="pickedDate"
-            [inline]="true"
-            [showWeek]="true"
-            [firstDayOfWeek]="1"
-            (onSelect)="onDateSelect($event)"
-            (onMonthChange)="onMonthChange($event)"
-            styleClass="dentflow-calendar"
-          >
-            <ng-template #date let-day>
-              <span class="cal-day" [class.has-rdv]="countFor(day) > 0">
-                {{ day.day }}
-                @if (countFor(day) > 0) {
-                  <span class="cal-dot" [attr.aria-label]="countFor(day) + ' rendez-vous'">{{ countFor(day) }}</span>
-                }
-              </span>
-            </ng-template>
-          </p-datepicker>
-
-          <p class="calendar-legend">
-            <span class="cal-dot cal-dot-legend">n</span> rendez-vous actifs ce jour-là
-          </p>
+      @if (calendar(); as cal) {
+        <div class="calendar-header">
+          <div class="calendar-nav">
+            <button
+              class="icon-button"
+              type="button"
+              (click)="goToMonth(cal.previousMonth)"
+              aria-label="Mois précédent"
+              title="Mois précédent"
+            >‹</button>
+            <h2 class="calendar-title">{{ cal.label }}</h2>
+            <button
+              class="icon-button"
+              type="button"
+              (click)="goToMonth(cal.nextMonth)"
+              aria-label="Mois suivant"
+              title="Mois suivant"
+            >›</button>
+          </div>
+          <div class="calendar-meta">
+            <span class="muted">{{ cal.totalAppointments }} rendez-vous ce mois-ci</span>
+            <button class="action-button ghost" type="button" (click)="goToCurrentMonth()">Aujourd’hui</button>
+          </div>
         </div>
 
-        <div class="calendar-agenda">
-          <h2>Agenda du {{ selectedDate() | date: 'EEEE d MMMM yyyy' }}</h2>
+        <div class="month-grid" [class.is-loading]="calendarLoading()">
+          <div class="month-head">
+            @for (header of cal.dayHeaders; track header) {
+              <div class="month-head-cell">{{ header }}</div>
+            }
+          </div>
 
-          @if (calendarLoading()) {
-            <p class="empty-state">Chargement…</p>
-          } @else if (dayAppointments().length === 0) {
-            <p class="empty-state">Aucun rendez-vous ce jour-là.</p>
-          } @else {
-            <p-timeline [value]="dayAppointments()" align="left" styleClass="dentflow-timeline">
-              <ng-template #opposite let-appointment>
-                <span class="agenda-time">{{ appointment.appointmentDate | date: 'HH:mm' }}</span>
-              </ng-template>
-
-              <ng-template #marker let-appointment>
-                <span class="agenda-marker" [class]="'marker-' + appointment.status"></span>
-              </ng-template>
-
-              <ng-template #content let-appointment>
-                <div class="agenda-card" [class.is-cancelled]="appointment.status === 'CANCELLED'">
-                  <div class="agenda-head">
-                    <strong>{{ appointment.patientName }}</strong>
-                    <p-tag
-                      [value]="statusLabel(appointment.status)"
-                      [severity]="statusSeverity(appointment.status)"
-                    />
-                  </div>
-                  <p class="agenda-line">{{ appointment.treatmentName ?? 'Sans soin prédéfini' }}</p>
-                  <p class="agenda-line muted">
-                    {{ appointment.dentistName }} · {{ appointment.durationMinutes }} min
-                    @if (appointment.treatmentPrice !== null) {
-                      · {{ appointment.treatmentPrice | number: '1.2-2' }} €
-                    }
-                  </p>
-                  @if (appointment.reason) {
-                    <p class="agenda-line muted">{{ appointment.reason }}</p>
-                  }
-                  @if (appointment.cancellationReason) {
-                    <p class="agenda-line muted">Annulé : {{ appointment.cancellationReason }}</p>
-                  }
-
-                  <div class="agenda-actions">
+          @for (week of cal.weeks; track week.weekNumber) {
+            <div class="month-row">
+              @for (day of week.days; track day.date) {
+                <div
+                  class="month-cell"
+                  [class.outside]="!day.inCurrentMonth"
+                  [class.today]="day.today"
+                  [class.weekend]="day.weekend"
+                >
+                  <div class="month-cell-head">
+                    <span class="month-cell-day">{{ day.dayOfMonth }}</span>
                     <button
-                      class="icon-button"
+                      class="month-cell-add"
                       type="button"
-                      [disabled]="!appointment.canEdit"
-                      (click)="openEdit(appointment)"
-                      [attr.aria-label]="'Modifier le rendez-vous de ' + appointment.patientName"
-                      title="Modifier / reporter"
-                    >✎</button>
-                    @if (appointment.canComplete) {
+                      (click)="createOnDay(day.date)"
+                      [attr.aria-label]="'Ajouter un rendez-vous le ' + day.date"
+                      title="Ajouter un rendez-vous"
+                    >+</button>
+                  </div>
+
+                  <div class="month-cell-events">
+                    @for (appointment of day.appointments; track appointment.id) {
                       <button
-                        class="icon-button"
                         type="button"
-                        [disabled]="pendingId() === appointment.id"
-                        (click)="confirmComplete(appointment, $event)"
-                        [attr.aria-label]="'Marquer réalisé le rendez-vous de ' + appointment.patientName"
-                        title="Marquer comme réalisé"
-                      >✓</button>
-                    }
-                    @if (appointment.canCancel) {
-                      <button
-                        class="icon-button danger"
-                        type="button"
-                        [disabled]="pendingId() === appointment.id"
-                        (click)="openCancelDialog(appointment)"
-                        [attr.aria-label]="'Annuler le rendez-vous de ' + appointment.patientName"
-                        title="Annuler"
-                      >✕</button>
+                        class="event"
+                        [class]="'event event-' + appointment.status"
+                        (click)="openEdit(appointment)"
+                        [attr.aria-label]="
+                          appointment.patientName + ' à ' + (appointment.appointmentDate | date: 'HH:mm')
+                        "
+                        [attr.title]="
+                          (appointment.appointmentDate | date: 'HH:mm') +
+                          ' · ' + appointment.patientName +
+                          ' · ' + (appointment.treatmentName ?? 'sans soin') +
+                          ' · ' + appointment.dentistName +
+                          ' · ' + appointment.durationMinutes + ' min'
+                        "
+                      >
+                        <span class="event-time">{{ appointment.appointmentDate | date: 'HH:mm' }}</span>
+                        <span class="event-name">{{ appointment.patientName }}</span>
+                        <span class="event-detail">{{ appointment.treatmentName ?? 'Sans soin' }}</span>
+                      </button>
                     }
                   </div>
                 </div>
-              </ng-template>
-            </p-timeline>
+              }
+            </div>
           }
         </div>
-      </div>
+
+        <div class="calendar-key">
+          <span><i class="key-dot key-SCHEDULED"></i> Planifié</span>
+          <span><i class="key-dot key-RESCHEDULED"></i> Reporté</span>
+          <span><i class="key-dot key-COMPLETED"></i> Réalisé</span>
+          <span><i class="key-dot key-CANCELLED"></i> Annulé</span>
+        </div>
+      } @else {
+        <p class="empty-state">Chargement du calendrier…</p>
+      }
     } @else {
 
     <p-table
@@ -307,10 +294,6 @@
       <h2>{{ editedAppointment() ? 'Modifier le rendez-vous' : 'Planifier un rendez-vous' }}</h2>
       <p>Un créneau déjà occupé par le même dentiste sera refusé.</p>
     </div>
-
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
 
     <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div class="full-width">

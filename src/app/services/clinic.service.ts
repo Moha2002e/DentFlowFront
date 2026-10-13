@@ -7,7 +7,7 @@ import {
   AppointmentRequest,
   AppointmentStats,
   AppointmentStatus,
-  CalendarDay,
+  CalendarMonth,
   Dentist,
   DentistRequest,
   Patient,
@@ -123,9 +123,9 @@ export class AppointmentsService {
   }
 
   /** Pastilles du calendrier : un compteur par jour, regroupe par la base. */
-  getCalendar(month: string): Observable<CalendarDay[]> {
+  getCalendar(month: string): Observable<CalendarMonth> {
     const params = new HttpParams().set('month', month);
-    return this.http.get<CalendarDay[]>(`${this.baseUrl}/calendar`, { params });
+    return this.http.get<CalendarMonth>(`${this.baseUrl}/calendar`, { params });
   }
 
   /** Agenda d'une journee, deja trie par heure cote serveur. */

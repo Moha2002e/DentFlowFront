@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Drawer } from 'primeng/drawer';
 import { SortIcon, TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
+import { Toast } from 'primeng/toast';
 import { finalize } from 'rxjs';
 import { Dentist, DentistRequest } from '../../models/clinic.models';
 import { DentistsService } from '../../services/clinic.service';
@@ -12,8 +13,8 @@ import { UsersService } from '../../services/users.service';
 
 @Component({
   selector: 'app-dentists',
-  imports: [ConfirmDialog, Drawer, ReactiveFormsModule, SortIcon, TableModule, Tag],
-  providers: [ConfirmationService],
+  imports: [ConfirmDialog, Drawer, ReactiveFormsModule, SortIcon, TableModule, Tag, Toast],
+  providers: [ConfirmationService, MessageService],
   templateUrl: './dentists.html',
 })
 export class Dentists {
@@ -21,10 +22,10 @@ export class Dentists {
   private readonly usersService = inject(UsersService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
 
   readonly dentists = signal<Dentist[]>([]);
   readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
   readonly saving = signal(false);
   readonly pendingId = signal<number | null>(null);
   readonly editedDentist = signal<Dentist | null>(null);
@@ -58,9 +59,8 @@ export class Dentists {
       .subscribe({
         next: (dentists) => {
           this.dentists.set(dentists);
-          this.error.set(null);
-        },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+              },
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -70,7 +70,6 @@ export class Dentists {
   }
 
   openCreate(): void {
-    this.error.set(null);
     this.editedDentist.set(null);
     this.form.reset({
       firstName: '',
@@ -88,7 +87,6 @@ export class Dentists {
   }
 
   openEdit(dentist: Dentist): void {
-    this.error.set(null);
     this.editedDentist.set(dentist);
     this.form.reset({
       firstName: dentist.firstName,
@@ -136,7 +134,6 @@ export class Dentists {
       : this.dentistsService.create(request);
 
     this.saving.set(true);
-    this.error.set(null);
     call.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: (saved) => {
         this.dentists.update((dentists) =>
@@ -146,7 +143,7 @@ export class Dentists {
         );
         this.closeDrawer();
       },
-      error: (error) => this.error.set(this.usersService.errorMessage(error)),
+      error: (error) => this.notifyError(error),
     });
   }
 
@@ -170,7 +167,7 @@ export class Dentists {
       .pipe(finalize(() => this.pendingId.set(null)))
       .subscribe({
         next: (updated) => this.replace(updated),
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -181,7 +178,7 @@ export class Dentists {
       .pipe(finalize(() => this.pendingId.set(null)))
       .subscribe({
         next: (updated) => this.replace(updated),
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -189,6 +186,16 @@ export class Dentists {
     this.dentists.update((dentists) =>
       dentists.map((item) => (item.id === dentist.id ? dentist : item)),
     );
+  }
+
+  /** Une seule surface d'affichage pour les erreurs : le toast. */
+  private notifyError(error: unknown): void {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: this.usersService.errorMessage(error),
+      life: 6000,
+    });
   }
 
   private emptyToNull(value: string): string | null {

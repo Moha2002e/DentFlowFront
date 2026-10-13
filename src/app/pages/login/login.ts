@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Card } from 'primeng/card';
+import { Checkbox } from 'primeng/checkbox';
 import { InputText } from 'primeng/inputtext';
 import { Password } from 'primeng/password';
 import { Router, RouterLink } from '@angular/router';
@@ -9,7 +10,7 @@ import { UsersService } from '../../services/users.service';
 
 @Component({
   selector: 'app-login',
-  imports: [Card, InputText, Password, ReactiveFormsModule, RouterLink],
+  imports: [Card, Checkbox, InputText, Password, ReactiveFormsModule, RouterLink],
   templateUrl: './login.html',
 })
 export class Login {
@@ -19,9 +20,13 @@ export class Login {
 
   protected readonly pending = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+
   protected readonly form = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    // Si l'utilisateur avait coche « se souvenir de moi », son adresse revient
+    // pre-remplie et la case reste cochee.
+    email: [this.usersService.rememberedEmail() ?? '', [Validators.required, Validators.email]],
     password: ['', Validators.required],
+    remember: [this.usersService.rememberedEmail() !== null],
   });
 
   protected submit(): void {
@@ -32,8 +37,11 @@ export class Login {
 
     this.pending.set(true);
     this.errorMessage.set(null);
+
+    const { email, password, remember } = this.form.getRawValue();
+
     this.usersService
-      .login(this.form.getRawValue())
+      .login({ email, password }, remember)
       .pipe(finalize(() => this.pending.set(false)))
       .subscribe({
         next: () => void this.router.navigate(['/home']),

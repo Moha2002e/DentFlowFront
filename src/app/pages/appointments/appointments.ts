@@ -1,13 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { DatePicker } from 'primeng/datepicker';
 import { Dialog } from 'primeng/dialog';
 import { Drawer } from 'primeng/drawer';
 import { SortIcon, TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { Timeline } from 'primeng/timeline';
+import { Toast } from 'primeng/toast';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { finalize, forkJoin } from 'rxjs';
 import {
@@ -17,7 +16,7 @@ import {
   AppointmentRequest,
   AppointmentStats,
   AppointmentStatus,
-  CalendarDay,
+  CalendarMonth,
   Dentist,
   Patient,
   Treatment,
@@ -39,7 +38,6 @@ import { UsersService } from '../../services/users.service';
   selector: 'app-appointments',
   imports: [
     ConfirmDialog,
-    DatePicker,
     DatePipe,
     DecimalPipe,
     Dialog,
@@ -49,9 +47,9 @@ import { UsersService } from '../../services/users.service';
     SortIcon,
     TableModule,
     Tag,
-    Timeline,
+    Toast,
   ],
-  providers: [ConfirmationService],
+  providers: [ConfirmationService, MessageService],
   templateUrl: './appointments.html',
 })
 export class Appointments {
@@ -62,6 +60,7 @@ export class Appointments {
   private readonly usersService = inject(UsersService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
 
   readonly appointments = signal<Appointment[]>([]);
   readonly stats = signal<AppointmentStats>({ total: 0, upcoming: 0, completed: 0, cancelled: 0 });
@@ -70,7 +69,6 @@ export class Appointments {
   readonly treatments = signal<Treatment[]>([]);
 
   readonly loading = signal(true);
-  readonly error = signal<string | null>(null);
   readonly saving = signal(false);
   readonly pendingId = signal<number | null>(null);
   readonly editedAppointment = signal<Appointment | null>(null);
@@ -78,14 +76,11 @@ export class Appointments {
 
   // --- Vue calendrier -------------------------------------------------------
   readonly view = signal<'list' | 'calendar'>('list');
-  /** Compteur par jour, indexe sur « yyyy-MM-dd » pour un accès direct au rendu. */
-  readonly dayCounts = signal<Record<string, number>>({});
-  readonly dayAppointments = signal<Appointment[]>([]);
-  readonly selectedDate = signal<Date>(new Date());
+  /** Grille du mois telle que renvoyee par le serveur : aucun calcul ici. */
+  readonly calendar = signal<CalendarMonth | null>(null);
   readonly calendarLoading = signal(false);
-
-  /** Lie au p-datepicker : PrimeNG exige une Date mutable. */
-  pickedDate: Date = new Date();
+  /** Mois affiche, au format « yyyy-MM ». */
+  readonly currentMonth = signal(Appointments.monthOf(new Date()));
 
   /** Rendez-vous a annuler, pilote par la boite de dialogue dediee. */
   readonly cancelTarget = signal<Appointment | null>(null);
@@ -121,7 +116,7 @@ export class Appointments {
         this.dentists.set(data.dentists);
         this.treatments.set(data.treatments);
       },
-      error: (error) => this.error.set(this.usersService.errorMessage(error)),
+      error: (error) => this.notifyError(error),
     });
   }
 
@@ -139,9 +134,8 @@ export class Appointments {
         next: (data) => {
           this.appointments.set(data.appointments);
           this.stats.set(data.stats);
-          this.error.set(null);
-        },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+              },
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -155,77 +149,53 @@ export class Appointments {
   switchView(view: 'list' | 'calendar'): void {
     this.view.set(view);
 
-    if (view === 'calendar') {
-      const current = this.selectedDate();
-      this.loadMonth(current.getFullYear(), current.getMonth() + 1);
-      this.loadDay(current);
+    if (view === 'calendar' && !this.calendar()) {
+      this.loadCalendar(this.currentMonth());
     }
   }
 
-  /** Pastilles du mois affiché. PrimeNG envoie un mois 1-based, parfois incomplet. */
-  onMonthChange(event: { month?: number; year?: number }): void {
-    const current = this.selectedDate();
-    this.loadMonth(event.year ?? current.getFullYear(), event.month ?? current.getMonth() + 1);
+  goToMonth(month: string): void {
+    this.loadCalendar(month);
   }
 
-  onDateSelect(date: Date): void {
-    this.selectedDate.set(date);
-    this.loadDay(date);
+  goToCurrentMonth(): void {
+    this.loadCalendar(Appointments.monthOf(new Date()));
   }
 
-  private loadMonth(year: number, month: number): void {
-    this.appointmentsService
-      .getCalendar(`${year}-${String(month).padStart(2, '0')}`)
-      .subscribe({
-        next: (days) => {
-          const counts: Record<string, number> = {};
-          for (const day of days) {
-            counts[day.date] = day.count;
-          }
-          this.dayCounts.set(counts);
-        },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
-      });
-  }
-
-  private loadDay(date: Date): void {
+  private loadCalendar(month: string): void {
     this.calendarLoading.set(true);
     this.appointmentsService
-      .getDayAgenda(this.toIsoDate(date))
+      .getCalendar(month)
       .pipe(finalize(() => this.calendarLoading.set(false)))
       .subscribe({
-        next: (appointments) => {
-          this.dayAppointments.set(appointments);
-          this.error.set(null);
-        },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        next: (calendar) => {
+          this.calendar.set(calendar);
+          this.currentMonth.set(calendar.month);
+              },
+        error: (error) => this.notifyError(error),
       });
   }
 
-  /** Nombre de rendez-vous d'une case du calendrier, 0 si aucun. */
-  countFor(day: { day: number; month: number; year: number }): number {
-    const key = `${day.year}-${String(day.month + 1).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
-    return this.dayCounts()[key] ?? 0;
+  /** Ouvre le formulaire de creation pre-rempli sur le jour clique. */
+  createOnDay(isoDate: string): void {
+    this.openCreate();
+    this.form.controls.appointmentDate.setValue(`${isoDate}T09:00`);
   }
 
-  /** Recharge la vue courante après une création, annulation ou clôture. */
+  /** Recharge la vue courante apres une creation, annulation ou cloture. */
   private refreshCurrentView(): void {
     this.loadAppointments();
 
     if (this.view() === 'calendar') {
-      const current = this.selectedDate();
-      this.loadMonth(current.getFullYear(), current.getMonth() + 1);
-      this.loadDay(current);
+      this.loadCalendar(this.currentMonth());
     }
   }
 
-  private toIsoDate(date: Date): string {
-    const pad = (part: number) => String(part).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  private static monthOf(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }
 
   openCreate(): void {
-    this.error.set(null);
     this.editedAppointment.set(null);
     this.form.reset({
       patientId: null,
@@ -240,7 +210,6 @@ export class Appointments {
   }
 
   openEdit(appointment: Appointment): void {
-    this.error.set(null);
     this.editedAppointment.set(appointment);
     this.form.reset({
       patientId: appointment.patientId,
@@ -298,18 +267,16 @@ export class Appointments {
       : this.appointmentsService.create(request);
 
     this.saving.set(true);
-    this.error.set(null);
     call.pipe(finalize(() => this.saving.set(false))).subscribe({
       next: () => {
         this.closeDrawer();
         this.refreshCurrentView();
       },
-      error: (error) => this.error.set(this.usersService.errorMessage(error)),
+      error: (error) => this.notifyError(error),
     });
   }
 
   openCancelDialog(appointment: Appointment): void {
-    this.error.set(null);
     this.cancelTarget.set(appointment);
     this.cancellationReason = '';
     this.cancelDialogVisible = true;
@@ -336,7 +303,7 @@ export class Appointments {
           this.closeCancelDialog();
           this.refreshCurrentView();
         },
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -360,7 +327,7 @@ export class Appointments {
       .pipe(finalize(() => this.pendingId.set(null)))
       .subscribe({
         next: () => this.refreshCurrentView(),
-        error: (error) => this.error.set(this.usersService.errorMessage(error)),
+        error: (error) => this.notifyError(error),
       });
   }
 
@@ -382,6 +349,16 @@ export class Appointments {
     slot.setHours(9, 0, 0, 0);
     const pad = (part: number) => String(part).padStart(2, '0');
     return `${slot.getFullYear()}-${pad(slot.getMonth() + 1)}-${pad(slot.getDate())}T${pad(slot.getHours())}:${pad(slot.getMinutes())}`;
+  }
+
+  /** Une seule surface d'affichage pour les erreurs : le toast. */
+  private notifyError(error: unknown): void {
+    this.messageService.add({
+      severity: 'error',
+      summary: 'Erreur',
+      detail: this.usersService.errorMessage(error),
+      life: 6000,
+    });
   }
 
   private emptyToNull(value: string): string | null {

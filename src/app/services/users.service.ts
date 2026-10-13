@@ -23,10 +23,11 @@ export class UsersService {
       .pipe(tap((response) => this.startSession(response)));
   }
 
-  login(request: LoginRequest): Observable<AuthResponse> {
+  /** `remember` : la session survit a la fermeture du navigateur. */
+  login(request: LoginRequest, remember = false): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiUrl}/auth/login`, request)
-      .pipe(tap((response) => this.startSession(response)));
+      .pipe(tap((response) => this.startSession(response, remember)));
   }
 
   logout(): void {
@@ -52,6 +53,11 @@ export class UsersService {
     return "Une erreur inattendue s'est produite.";
   }
 
+  /** Adresse memorisee lors d'une connexion avec « se souvenir de moi ». */
+  rememberedEmail(): string | null {
+    return this.storage.rememberedEmail;
+  }
+
   getUserRole(): string | undefined {
     return this.storage.user()?.role;
   }
@@ -59,8 +65,8 @@ export class UsersService {
     return this.http.get<User>(`${environment.apiUrl}/users/${id}`);
   }
 
-  private startSession(response: AuthResponse): void {
-    this.storage.save(response.accessToken, response.user);
+  private startSession(response: AuthResponse, remember = false): void {
+    this.storage.save(response.accessToken, response.user, remember);
     this.messageState.set(response.message);
   }
 

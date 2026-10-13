@@ -1,3 +1,5 @@
+<p-toast position="top-right" />
+
 <section class="page">
   <div class="page-card">
     <div class="page-toolbar">
@@ -18,10 +20,6 @@
         }
       </div>
     </div>
-
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
 
     <p-table
       [value]="dentists()"
@@ -118,10 +116,6 @@
       <h2>{{ editedDentist() ? editedDentist()!.fullName : 'Ajouter un dentiste' }}</h2>
       <p>Les champs marqués d’une étoile sont obligatoires.</p>
     </div>
-
-    @if (error()) {
-      <p class="alert alert-error" role="alert">{{ error() }}</p>
-    }
 
     <form class="form-grid" [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div>
